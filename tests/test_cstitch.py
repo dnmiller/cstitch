@@ -1,6 +1,5 @@
 import os.path
 
-import cstitch
 from cstitch import from_header
 
 
@@ -55,7 +54,15 @@ def test_enum_header():
 
 def test_primitives():
     """POD is parsed correctly"""
+    # modname = 'mymod'
+    # mod = from_header(modname, (get_header('test_primitives.h'),))
 
 
-def test_main():
-    assert cstitch  # use your library here
+def test_structs():
+    """Struct definitions are parsed correctly"""
+    modname = 'mymod'
+    mod = from_header(modname, (get_header('test_struct.h'), ))
+
+    assert 'TestStruct' in mod.__dict__
+    ts = mod.TestStruct()
+    assert ts.__module__ == modname

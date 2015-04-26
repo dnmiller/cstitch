@@ -2,6 +2,7 @@
 #define _TEST_STRUCT_
 #include <stdint.h>
 #include <stdbool.h>
+#include <stddef.h>
 
 struct TestStruct {
     /* Basic primitive types */
@@ -43,5 +44,40 @@ struct TestStruct {
     int_least8_t int_least8_t_val;
 };
 
+#if 0
+
+typedef float FLOAT32;
+typedef int INT;
+
+struct TestStructWithTypedefs
+{
+    FLOAT32 float_val;
+    INT int_val;
+};
+
+
+typedef struct 
+{
+    char char_val;
+    long long_val;
+
+} TypedefStruct;
+
+
+typedef struct 
+{
+    TypedefStruct nested1;
+    float float_val1;
+
+} StructWithNested;
+
+
+typedef struct
+{
+    TypedefStruct nested1;
+    StructWithNested nested;
+    
+} StructWithDoubleNested;
+#endif
 
 #endif
