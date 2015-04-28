@@ -1,11 +1,11 @@
-# ==- cindex.py - Python Indexing Library Bindings -----------*- python -*--===#
+# ==- cindex.py - Python Indexing Library Bindings -----------*- python
 #
 #                     The LLVM Compiler Infrastructure
 #
 # This file is distributed under the University of Illinois Open Source
 # License. See LICENSE.TXT for details.
 #
-# ==------------------------------------------------------------------------===#
+# ==--------------------------------------------------------------------
 
 r"""
 Clang Indexing Library Bindings
@@ -30,8 +30,8 @@ The major indexing objects are:
 
   TranslationUnit
 
-    High-level object encapsulating the AST for a single translation unit. These
-    can be loaded from .ast files or parsed on the fly.
+    High-level object encapsulating the AST for a single translation unit.
+    These can be loaded from .ast files or parsed on the fly.
 
   Cursor
 
@@ -1120,9 +1120,8 @@ CursorKind.MODULE_IMPORT_DECL = CursorKind(600)
 
 
 class TemplateArgumentKind(BaseEnumeration):
-    """
-    A TemplateArgumentKind describes the kind of entity that a template argument
-    represents.
+    """A TemplateArgumentKind describes the kind of entity that a template 
+    argument represents.
     """
 
     # The required BaseEnumeration declarations.
@@ -1352,7 +1351,8 @@ class Cursor(Structure):
                 self._enum_value = \
                     conf.lib.clang_getEnumConstantDeclUnsignedValue(self)
             else:
-                self._enum_value = conf.lib.clang_getEnumConstantDeclValue(self)
+                self._enum_value = \
+                    conf.lib.clang_getEnumConstantDeclValue(self)
         return self._enum_value
 
     @property
@@ -1928,7 +1928,7 @@ class _CXUnsavedFile(Structure):
                 ('length', c_ulong)]
 
 # Functions calls through the python interface are rather slow. Fortunately,
-# for most symboles, we do not need to perform a function call. Their spelling
+# for most symbols, we do not need to perform a function call. Their spelling
 # never changes and is consequently provided by this spelling cache.
 SpellingCache = {
     # 0: CompletionChunk.Kind("Optional"),
@@ -1977,8 +1977,9 @@ class CompletionChunk:
     @CachedProperty
     def spelling(self):
         if self.__kindNumber in SpellingCache:
-                return SpellingCache[self.__kindNumber]
-        return conf.lib.clang_getCompletionChunkText(self.cs, self.key).spelling
+            return SpellingCache[self.__kindNumber]
+        return conf.lib.clang_getCompletionChunkText(
+            self.cs, self.key).spelling
 
     # We do not use @CachedProperty here, as the manual implementation is
     # apparently still significantly faster. Please profile carefully if you
@@ -2182,10 +2183,10 @@ class Index(ClangObject):
         clang and generating the AST before loading. Additional command line
         parameters can be passed to clang via the args parameter.
 
-        In-memory contents for files can be provided by passing a list of pairs
-        to as unsaved_files, the first item should be the filenames to be mapped
-        and the second should be the contents to be substituted for the
-        file. The contents may be passed as strings or file objects.
+        In-memory contents for files can be provided by passing a list of
+        pairs to as unsaved_files, the first item should be the filenames to
+        be mapped and the second should be the contents to be substituted for
+        the file. The contents may be passed as strings or file objects.
 
         If an error was encountered during parsing, a TranslationUnitLoadError
         will be raised.
@@ -3500,14 +3501,14 @@ class Config:
         compatibility check is performed when loading the bindings. This check
         will throw an exception, as soon as it fails.
 
-        In case these bindings are used with an older version of libclang, parts
-        that have been stable between releases may still work. Users of the
-        python bindings can disable the compatibility check. This will cause
-        the python bindings to load, even though they are written for a newer
-        version of libclang. Failures now arise if unsupported or incompatible
-        features are accessed. The user is required to test themselves if the
-        features they are using are available and compatible between different
-        libclang versions.
+        In case these bindings are used with an older version of libclang,
+        parts that have been stable between releases may still work. Users of
+        the python bindings can disable the compatibility check. This will
+        cause the python bindings to load, even though they are written for a
+        newer version of libclang. Failures now arise if unsupported or
+        incompatible features are accessed. The user is required to test
+        themselves if the features they are using are available and compatible
+        between different libclang versions.
         """
         if Config.loaded:
             raise Exception("compatibility_check must be set before before "

@@ -1,6 +1,6 @@
 import os.path
 
-from cstitch import from_header
+from cstitch import Stitched
 
 
 def get_header(name):
@@ -10,43 +10,42 @@ def get_header(name):
 
 def test_enum_header():
     """Enums in headers are parsed correctly."""
-    modname = 'mymod'
-    mod = from_header(modname, (get_header('test_enum.h'),))
+    obj = Stitched(get_header('test_enum.h'))
 
     def assert_enum_val(obj, expected):
         for name, value in expected.iteritems():
-            if hasattr(obj, '__module__'):
-                assert obj.__module__ == modname
-                assert name not in mod.__dict__
-            else:
-                assert name in mod.__dict__
+            assert name in obj.__dict__
             assert getattr(obj, name) == value
 
-    assert_enum_val(mod.TestEnum, expected={
+    assert hasattr(obj, 'TestEnum')
+    assert_enum_val(obj.TestEnum, expected={
         'TEST_ENUM_1': 0,
         'TEST_ENUM_2': 1,
         'TEST_ENUM_3': 2})
 
-    assert_enum_val(mod.TYPEDEF_ENUM, expected={
+    assert hasattr(obj, 'TYPEDEF_ENUM')
+    assert_enum_val(obj.TYPEDEF_ENUM, expected={
         'TEST_TYPEDEF_ENUM_1': 0,
         'TEST_TYPEDEF_ENUM_2': 1,
         'TEST_TYPEDEF_ENUM_3': 2,
         'TEST_TYPEDEF_ENUM_4': 3})
 
-    assert_enum_val(mod.OutOfOrderEnum, expected={
+    assert hasattr(obj, 'OutOfOrderEnum')
+    assert_enum_val(obj.OutOfOrderEnum, expected={
         'OUT_ENUM_1': -100,
         'OUT_ENUM_2': 0,
         'OUT_ENUM_3': 100,
         'OUT_ENUM_4': -1,
         'OUT_ENUM_5': 0})
 
-    assert_enum_val(mod.RefEnum, expected={
+    assert hasattr(obj, 'RefEnum')
+    assert_enum_val(obj.RefEnum, expected={
         'REF_ENUM_1': 0,
         'REF_ENUM_2': 5,
         'REF_ENUM_3': 1})
 
-    # Enums without labels get set at the module level.
-    assert_enum_val(mod, expected={
+    # Enums without labels get set at the class level.
+    assert_enum_val(obj, expected={
         'ANON_ENUM_1': 0,
         'ANON_ENUM_2': 1,
         'ANON_ENUM_3': 5})
@@ -55,14 +54,8 @@ def test_enum_header():
 def test_primitives():
     """POD is parsed correctly"""
     # modname = 'mymod'
-    # mod = from_header(modname, (get_header('test_primitives.h'),))
+    # obj = from_header(modname, (get_header('test_primitives.h'),))
 
 
 def test_structs():
     """Struct definitions are parsed correctly"""
-    modname = 'mymod'
-    mod = from_header(modname, (get_header('test_struct.h'), ))
-
-    assert 'TestStruct' in mod.__dict__
-    ts = mod.TestStruct()
-    assert ts.__module__ == modname

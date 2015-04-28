@@ -4,6 +4,10 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+
+typedef int newtype;
+
+
 struct TestStruct {
     /* Basic primitive types */
     _Bool bool_val;
@@ -28,6 +32,8 @@ struct TestStruct {
     long long longlong_val;
     unsigned long long ulonglong_val;
 
+    /* Likely to be typedefs */
+    newtype newtypeval;
     intmax_t intmax_t_val;
     size_t size_t_val;
 
