@@ -51,7 +51,7 @@ class Stitched(object):
             _ck.ENUM_CONSTANT_DECL:     self._parse_enum_constant_decl,
             _ck.STRUCT_DECL:            self._parse_struct_decl,
             # _ck.UNION_DECL:             self._parse_union_decl,
-            # _ck.FIELD_DECL:             self._parse_field_decl,
+            _ck.FIELD_DECL:             self._parse_field_decl,
             # _ck.FUNCTION_DECL:          self._parse_function_decl,
             # _ck.VAR_DECL:               self._parse_var_decl,
             # _ck.PARM_DECL:              self._parse_parm_decl,
@@ -136,7 +136,7 @@ class Stitched(object):
             raise NotImplementedError(
                 'This typedef not implemented: %s' % type_cur.kind)
 
-    def _parse_struct_decl(cur, bind_to):
+    def _parse_struct_decl(self, cur, bind_to):
         """Parse a struct declaration
 
         This creates a new class for the struct that mirrors the class
@@ -149,26 +149,51 @@ class Stitched(object):
         def __repr__(self):
             return rep
 
-        # We're assuming that bind_to is a module here. Unclear if this is
-        # always the case.
         values = {
             '__repr__': classmethod(__repr__),
-            '__module__': bind_to.__name__,
             '_fields_': []}
 
         new_type = type(name, (ctypes.Structure,), values)
         setattr(bind_to, name, new_type)
 
         bind_to = new_type
-        parse_cursor_children(cur, bind_to)
+        self._parse_cursor_children(cur, bind_to)
 
-        raise NotImplementedError('No structs yet')
+        # raise NotImplementedError('No structs yet')
 
-    def _parse_field_decl(cur, bind_to):
+    def _parse_field_decl(self, cur, bind_to):
         """Parse a struct or union field declaration"""
+
         if cur.type.kind in _type_map:
             field_type = _type_map[cur.type.kind]
+        elif cur.type.kind == _tk.TYPEDEF:
+            # This is a typedef'd field. Check to see if it's been declared.
+            type_name = cur.type.get_declaration().spelling
+
+            if hasattr(self, type_name):
+                field_type = getattr(self, type_name)
+            else:
+                # Defined someplace else, such as the standard library (e.g.
+                # intmax_t).
+                field_type = _get_underlying_typedef_type(cur)
+                if not field_type:
+                    raise RuntimeError('Unknown type {0} at {1}'.format(
+                        type_name, cur.location))
         else:
-            NotImplementedError('Struct field type is unknown')
+            raise NotImplementedError('Struct field type %s is unknown' %
+                                      cur.type.kind)
 
         bind_to._fields_.append((cur.spelling, field_type))
+
+
+def _get_underlying_typedef_type(cur):
+    max_depth = 100
+    cur_depth = 1
+    while cur.underlying_typedef_type == _tk.INVALID:
+        cur = cur.type.get_declaration()
+        if cur_depth > max_depth:
+            raise RuntimeError('Max typedef depth reached with no basic type')
+        else:
+            cur_depth += 1
+
+    return cur.underlying_typedef_type

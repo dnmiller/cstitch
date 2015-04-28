@@ -8,7 +8,7 @@ def get_header(name):
         os.path.dirname(os.path.realpath(__file__)), 'headers', name)
 
 
-def test_enum_header():
+def test_enums():
     """Enums in headers are parsed correctly."""
     obj = Stitched(get_header('test_enum.h'))
 
@@ -59,3 +59,6 @@ def test_primitives():
 
 def test_structs():
     """Struct definitions are parsed correctly"""
+    obj = Stitched(get_header('test_struct.h'))
+    import pudb; pudb.set_trace()  # breakpoint 93647d50 //
+    
