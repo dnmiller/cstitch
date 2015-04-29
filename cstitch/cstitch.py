@@ -130,6 +130,10 @@ class Stitched(object):
             for child in type_cur.get_children():
                 if child.spelling in bind_to.__dict__:
                     delattr(bind_to, child.spelling)
+        elif type_cur.kind == _ck.TYPEDEF_DECL:
+            self._parse_typedef_decl(type_cur, bind_to)
+            setattr(bind_to, cur.spelling,
+                    getattr(bind_to, type_cur.spelling))
         elif type_ref.kind in _type_map:
             setattr(bind_to, cur.spelling, _type_map[type_ref.kind])
         else:
@@ -157,6 +161,7 @@ class Stitched(object):
         setattr(bind_to, name, new_type)
 
         bind_to = new_type
+
         self._parse_cursor_children(cur, bind_to)
 
         # raise NotImplementedError('No structs yet')
@@ -189,11 +194,13 @@ class Stitched(object):
 def _get_underlying_typedef_type(cur):
     max_depth = 100
     cur_depth = 1
-    while cur.underlying_typedef_type == _tk.INVALID:
+    while cur.type.kind == _tk.TYPEDEF:
         cur = cur.type.get_declaration()
         if cur_depth > max_depth:
             raise RuntimeError('Max typedef depth reached with no basic type')
         else:
             cur_depth += 1
 
-    return cur.underlying_typedef_type
+    import pudb; pudb.set_trace()  # breakpoint 35806943 //
+
+    return _type_map.get(cur.underlying_typedef_type.kind, None)
