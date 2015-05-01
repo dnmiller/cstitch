@@ -1,6 +1,7 @@
 #ifndef _TEST_TYPEDEF_H_
 #define _TEST_TYPEDEF_H_
 #include <stddef.h>
+#include <stdbool.h>
 
 #include "test_typedef_external.h"
 
@@ -30,5 +31,9 @@ typedef localtype1_t newlocaltype_t;
 /* Test typedefs from stdlib */
 
 typedef size_t stdtype;
+
+typedef bool bool_type;
+
+typedef _Bool _Bool_type;
 
 #endif

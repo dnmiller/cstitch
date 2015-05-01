@@ -72,14 +72,34 @@ def test_typedefs():
 
     # Assert typedefs from standard library.
     assert obj.stdtype == obj.size_t
+    assert obj.bool_type == ctypes.c_bool
+    assert obj._Bool_type == ctypes.c_bool
 
 
 def test_primitives():
     """POD is parsed correctly"""
-    # modname = 'mymod'
-    # obj = from_header(modname, (get_header('test_primitives.h'),))
+    # obj = Stitched(get_header('test_primitives.h'))
 
 
 def test_structs():
     """Struct definitions are parsed correctly"""
-    # obj = Stitched(get_header('test_struct.h'))
+    obj = Stitched(get_header('test_struct.h'))
+    fields = (
+        (ctypes.c_bool, 'bool_val'),
+        (ctypes.c_char, 'char_val'),
+        (ctypes.c_char, 'schar_val'),
+        (ctypes.c_ubyte, 'uchar_val'),
+        (ctypes.c_short, 'short_val'),
+        (ctypes.c_ushort, 'ushort_val'),
+        (ctypes.c_int, 'int_val'),
+        (ctypes.c_uint, 'uint_val'),
+        (ctypes.c_long, 'long_val'),
+        (ctypes.c_ulong, 'ulong_val'),
+        (ctypes.c_float, 'float_val'),
+        (ctypes.c_double, 'double_val'),
+        (ctypes.c_longdouble, 'ldouble_val'),
+        (ctypes.c_longlong, 'longlong_val'),
+        (ctypes.c_ulonglong, 'ulonglong_val'))
+
+    for field_type, name in fields:
+        assert hasattr(obj.TestStruct, name)

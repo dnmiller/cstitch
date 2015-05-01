@@ -53,7 +53,7 @@ class Stitched(object):
             # _ck.UNION_DECL:             self._parse_union_decl,
             _ck.FIELD_DECL:             self._parse_field_decl,
             # _ck.FUNCTION_DECL:          self._parse_function_decl,
-            # _ck.VAR_DECL:               self._parse_var_decl,
+            _ck.VAR_DECL:               self._parse_var_decl,
             # _ck.PARM_DECL:              self._parse_parm_decl,
             # _ck.TYPE_REF:               self._parse_type_ref,
 
@@ -130,15 +130,17 @@ class Stitched(object):
             for child in type_cur.get_children():
                 if child.spelling in bind_to.__dict__:
                     delattr(bind_to, child.spelling)
+        elif type_ref.kind in _type_map:
+            # Found a POD type, bind it to the class.
+            setattr(bind_to, cur.spelling, _type_map[type_ref.kind])
         elif type_cur.kind == _ck.TYPEDEF_DECL:
+            # If it's a typedef of a typedef, go back and find the old
+            # typedef.
             self._parse_typedef_decl(type_cur, bind_to)
             setattr(bind_to, cur.spelling,
                     getattr(bind_to, type_cur.spelling))
-        elif type_ref.kind in _type_map:
-            setattr(bind_to, cur.spelling, _type_map[type_ref.kind])
         else:
-            raise NotImplementedError(
-                'This typedef not implemented: %s' % type_cur.kind)
+            raise RuntimeError('Unknown type: %s' % type_cur.kind)
 
     def _parse_struct_decl(self, cur, bind_to):
         """Parse a struct declaration
@@ -146,8 +148,10 @@ class Stitched(object):
         This creates a new class for the struct that mirrors the class
         declared in the header file.
         """
-        name = cur.spelling
+        fields = []
+        self._parse_cursor_children(cur, fields)
 
+        name = cur.spelling
         rep = name + '(' + str(cur.location) + ')'
 
         def __repr__(self):
@@ -155,52 +159,30 @@ class Stitched(object):
 
         values = {
             '__repr__': classmethod(__repr__),
-            '_fields_': []}
+            '_fields_': fields
+        }
 
         new_type = type(name, (ctypes.Structure,), values)
         setattr(bind_to, name, new_type)
-
-        bind_to = new_type
-
-        self._parse_cursor_children(cur, bind_to)
-
-        # raise NotImplementedError('No structs yet')
 
     def _parse_field_decl(self, cur, bind_to):
         """Parse a struct or union field declaration"""
 
         if cur.type.kind in _type_map:
             field_type = _type_map[cur.type.kind]
+        elif hasattr(self, cur.type.spelling):
+            field_type = getattr(self, cur.type.spelling)
         elif cur.type.kind == _tk.TYPEDEF:
-            # This is a typedef'd field. Check to see if it's been declared.
-            type_name = cur.type.get_declaration().spelling
-
-            if hasattr(self, type_name):
-                field_type = getattr(self, type_name)
-            else:
-                # Defined someplace else, such as the standard library (e.g.
-                # intmax_t).
-                field_type = _get_underlying_typedef_type(cur)
-                if not field_type:
-                    raise RuntimeError('Unknown type {0} at {1}'.format(
-                        type_name, cur.location))
+            # Go find this type (needed for stlib types)
+            self._parse_typedef_decl(cur.type.get_declaration(), self)
+            field_type = getattr(self, cur.type.spelling)
         else:
             raise NotImplementedError('Struct field type %s is unknown' %
                                       cur.type.kind)
 
-        bind_to._fields_.append((cur.spelling, field_type))
+        bind_to.append((cur.spelling, field_type))
 
+    def _parse_var_decl(self, cur, bind_to):
+        """Parse a variable declaration"""
+        raise NotImplementedError('global variables not yet figured out')
 
-def _get_underlying_typedef_type(cur):
-    max_depth = 100
-    cur_depth = 1
-    while cur.type.kind == _tk.TYPEDEF:
-        cur = cur.type.get_declaration()
-        if cur_depth > max_depth:
-            raise RuntimeError('Max typedef depth reached with no basic type')
-        else:
-            cur_depth += 1
-
-    import pudb; pudb.set_trace()  # breakpoint 35806943 //
-
-    return _type_map.get(cur.underlying_typedef_type.kind, None)
