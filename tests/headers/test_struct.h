@@ -50,10 +50,10 @@ struct TestStruct {
     int_least8_t int_least8_t_val;
 };
 
-#if 0
 
 typedef float FLOAT32;
 typedef int INT;
+
 
 struct TestStructWithTypedefs
 {
@@ -70,20 +70,29 @@ typedef struct
 } TypedefStruct;
 
 
+/* We currently ignore typedef struct names */
+typedef struct _unsused_name_
+{
+    char char_val;
+    long long_val;
+
+} TypedefStruct2;
+
+
 typedef struct 
 {
+    float float_val;
     TypedefStruct nested1;
-    float float_val1;
 
 } StructWithNested;
 
 
-typedef struct
+typedef struct _foo_struct_
 {
     TypedefStruct nested1;
     StructWithNested nested;
     
 } StructWithDoubleNested;
-#endif
+
 
 #endif

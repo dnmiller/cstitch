@@ -84,22 +84,56 @@ def test_primitives():
 def test_structs():
     """Struct definitions are parsed correctly"""
     obj = Stitched(get_header('test_struct.h'))
-    fields = (
-        (ctypes.c_bool, 'bool_val'),
-        (ctypes.c_char, 'char_val'),
-        (ctypes.c_char, 'schar_val'),
-        (ctypes.c_ubyte, 'uchar_val'),
-        (ctypes.c_short, 'short_val'),
-        (ctypes.c_ushort, 'ushort_val'),
-        (ctypes.c_int, 'int_val'),
-        (ctypes.c_uint, 'uint_val'),
-        (ctypes.c_long, 'long_val'),
-        (ctypes.c_ulong, 'ulong_val'),
-        (ctypes.c_float, 'float_val'),
-        (ctypes.c_double, 'double_val'),
-        (ctypes.c_longdouble, 'ldouble_val'),
-        (ctypes.c_longlong, 'longlong_val'),
-        (ctypes.c_ulonglong, 'ulonglong_val'))
 
-    for field_type, name in fields:
+    # TestStruct
+    fields = (
+        ('bool_val', ctypes.c_bool),
+        ('char_val', ctypes.c_char),
+        ('schar_val', ctypes.c_char),
+        ('uchar_val', ctypes.c_ubyte),
+        ('short_val', ctypes.c_short),
+        ('ushort_val', ctypes.c_ushort),
+        ('int_val', ctypes.c_int),
+        ('uint_val', ctypes.c_uint),
+        ('long_val', ctypes.c_long),
+        ('ulong_val', ctypes.c_ulong),
+        ('float_val', ctypes.c_float),
+        ('double_val', ctypes.c_double),
+        ('ldouble_val', ctypes.c_longdouble),
+        ('longlong_val', ctypes.c_longlong),
+        ('ulonglong_val', ctypes.c_ulonglong))
+
+    for name, field_type in fields:
         assert hasattr(obj.TestStruct, name)
+        assert hasattr(getattr(obj.TestStruct, name), 'offset')
+        assert hasattr(getattr(obj.TestStruct, name), 'size')
+        assert field_type.__name__ in str(getattr(obj.TestStruct, name))
+
+    # Test typedefs
+    assert obj.FLOAT32 == ctypes.c_float
+    assert obj.INT == ctypes.c_int
+
+    # TestStructWithTypedefs
+    assert 'c_float' in str(obj.TestStructWithTypedefs.float_val)
+    assert 'c_int' in str(obj.TestStructWithTypedefs.int_val)
+
+    # TypedefStruct
+    assert 'c_char' in str(obj.TypedefStruct.char_val)
+    assert 'c_long' in str(obj.TypedefStruct.long_val)
+
+    # TypedefStruct2
+    assert 'c_char' in str(obj.TypedefStruct2.char_val)
+    assert 'c_long' in str(obj.TypedefStruct2.long_val)
+
+    # StructWithNested
+    assert 'TypedefStruct' in str(obj.StructWithNested.nested1)
+    assert 'c_float' in str(obj.StructWithNested.float_val)
+    x = obj.StructWithNested()
+    assert hasattr(x.nested1, 'char_val')
+
+    assert 'TypedefStruct' in str(obj.StructWithDoubleNested.nested1)
+    assert 'StructWithNested' in str(obj.StructWithDoubleNested.nested)
+    x = obj.StructWithDoubleNested()
+    assert hasattr(x.nested1, 'char_val')
+    assert hasattr(x.nested, 'nested1')
+    assert hasattr(x.nested.nested1, 'char_val')

@@ -130,6 +130,8 @@ class Stitched(object):
             for child in type_cur.get_children():
                 if child.spelling in bind_to.__dict__:
                     delattr(bind_to, child.spelling)
+        elif type_cur.kind == _ck.STRUCT_DECL:
+            self._parse_struct_decl(type_cur, bind_to, cur.spelling)
         elif type_ref.kind in _type_map:
             # Found a POD type, bind it to the class.
             setattr(bind_to, cur.spelling, _type_map[type_ref.kind])
@@ -142,7 +144,7 @@ class Stitched(object):
         else:
             raise RuntimeError('Unknown type: %s' % type_cur.kind)
 
-    def _parse_struct_decl(self, cur, bind_to):
+    def _parse_struct_decl(self, cur, bind_to, name=None):
         """Parse a struct declaration
 
         This creates a new class for the struct that mirrors the class
@@ -151,7 +153,7 @@ class Stitched(object):
         fields = []
         self._parse_cursor_children(cur, fields)
 
-        name = cur.spelling
+        name = name if name else cur.spelling
         rep = name + '(' + str(cur.location) + ')'
 
         def __repr__(self):
