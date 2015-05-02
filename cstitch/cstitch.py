@@ -51,7 +51,6 @@ class Stitched(object):
             _ck.ENUM_CONSTANT_DECL:     self._parse_enum_constant_decl,
             _ck.STRUCT_DECL:            self._parse_struct_decl,
             # _ck.UNION_DECL:             self._parse_union_decl,
-            _ck.FIELD_DECL:             self._parse_field_decl,
             # _ck.FUNCTION_DECL:          self._parse_function_decl,
             _ck.VAR_DECL:               self._parse_var_decl,
             # _ck.PARM_DECL:              self._parse_parm_decl,
@@ -150,10 +149,25 @@ class Stitched(object):
         This creates a new class for the struct that mirrors the class
         declared in the header file.
         """
-        fields = []
-        self._parse_cursor_children(cur, fields)
-
         name = name if name else cur.spelling
+        fields = []
+        for child in cur.get_children():
+            # Ignore things that have been included from other files.
+            if not child.location.file.name.endswith(self.filename):
+                continue
+            if child.kind == _ck.STRUCT_DECL:
+                if child.spelling == '':
+                    # This is a nameless nested struct declaration, which is
+                    # handled in the next itertion of the loop during the
+                    # field declaration.
+                    continue
+                else:
+                    self._parse_struct_decl(child, bind_to)
+            elif child.kind == _ck.FIELD_DECL:
+                self._parse_field_decl(child, fields, name)
+            else:
+                raise NotImplementedError(
+                    'Unknown cursor type inside struct declaration')
         rep = name + '(' + str(cur.location) + ')'
 
         def __repr__(self):
@@ -167,7 +181,7 @@ class Stitched(object):
         new_type = type(name, (ctypes.Structure,), values)
         setattr(bind_to, name, new_type)
 
-    def _parse_field_decl(self, cur, bind_to):
+    def _parse_field_decl(self, cur, fields, struct_name=None):
         """Parse a struct or union field declaration"""
 
         if cur.type.kind in _type_map:
@@ -178,13 +192,29 @@ class Stitched(object):
             # Go find this type (needed for stlib types)
             self._parse_typedef_decl(cur.type.get_declaration(), self)
             field_type = getattr(self, cur.type.spelling)
+        elif cur.type.kind == _tk.UNEXPOSED:
+            # We have a nested struct declaration someplace. Go find it.
+            type_cur = cur.type.get_declaration()
+
+            if type_cur.spelling != '':
+                # Assume we've already parsed the declaration
+                name = type_cur.spelling
+            else:
+                # Unnamed nested structure declarations don't really gel with
+                # the ctypes interface, since Python requires all types to
+                # have names. If we're given a nested struct declaration
+                # without a name, then we spoof one from the name of the field
+                # and enclosing struct.
+                name = '_' + struct_name + '_' + cur.spelling + '_type'
+                self._parse_struct_decl(type_cur, self, name)
+
+            field_type = getattr(self, name)
         else:
             raise NotImplementedError('Struct field type %s is unknown' %
                                       cur.type.kind)
 
-        bind_to.append((cur.spelling, field_type))
+        fields.append((cur.spelling, field_type))
 
     def _parse_var_decl(self, cur, bind_to):
         """Parse a variable declaration"""
         raise NotImplementedError('global variables not yet figured out')
-

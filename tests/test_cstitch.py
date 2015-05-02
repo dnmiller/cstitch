@@ -125,15 +125,27 @@ def test_structs():
     assert 'c_char' in str(obj.TypedefStruct2.char_val)
     assert 'c_long' in str(obj.TypedefStruct2.long_val)
 
-    # StructWithNested
-    assert 'TypedefStruct' in str(obj.StructWithNested.nested1)
-    assert 'c_float' in str(obj.StructWithNested.float_val)
-    x = obj.StructWithNested()
+    # StructWithSub
+    assert 'TypedefStruct' in str(obj.StructWithSub.nested1)
+    assert 'c_float' in str(obj.StructWithSub.float_val)
+    x = obj.StructWithSub()
     assert hasattr(x.nested1, 'char_val')
 
-    assert 'TypedefStruct' in str(obj.StructWithDoubleNested.nested1)
-    assert 'StructWithNested' in str(obj.StructWithDoubleNested.nested)
-    x = obj.StructWithDoubleNested()
+    # StructWithDoubleSub
+    assert 'TypedefStruct' in str(obj.StructWithDoubleSub.nested1)
+    assert 'StructWithSub' in str(obj.StructWithDoubleSub.nested)
+    x = obj.StructWithDoubleSub()
     assert hasattr(x.nested1, 'char_val')
     assert hasattr(x.nested, 'nested1')
     assert hasattr(x.nested.nested1, 'char_val')
+
+    # WithNested
+    assert 'NestedStruct' in str(obj.WithNested.nested)
+    x = obj.WithNested()
+    assert hasattr(x.nested, 'float_val')
+
+    # WithNamelessNested
+    assert '_WithNamelessNested_nested_type' in \
+        str(obj.WithNamelessNested.nested)
+    x = obj.WithNamelessNested()
+    assert hasattr(x.nested, 'float_val')

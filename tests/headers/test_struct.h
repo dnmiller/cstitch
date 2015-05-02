@@ -71,7 +71,7 @@ typedef struct
 
 
 /* We currently ignore typedef struct names */
-typedef struct _unsused_name_
+typedef struct _unused_name_
 {
     char char_val;
     long long_val;
@@ -84,15 +84,29 @@ typedef struct
     float float_val;
     TypedefStruct nested1;
 
-} StructWithNested;
+} StructWithSub;
 
 
-typedef struct _foo_struct_
+typedef struct
 {
     TypedefStruct nested1;
-    StructWithNested nested;
+    StructWithSub nested;
     
-} StructWithDoubleNested;
+} StructWithDoubleSub;
 
+
+struct WithNested {
+    char not_nested;
+    struct NestedStruct {
+        float float_val;
+    } nested;
+};
+
+struct WithNamelessNested {
+    char not_nested;
+    struct {
+        float float_val;
+    } nested;
+};
 
 #endif
