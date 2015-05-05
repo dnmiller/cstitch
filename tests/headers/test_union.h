@@ -1,5 +1,5 @@
-#ifndef _TEST_STRUCT_
-#define _TEST_STRUCT_
+#ifndef _TEST_UNION_
+#define _TEST_UNION_
 #include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -8,7 +8,7 @@
 typedef int newtype;
 
 
-struct TestStruct {
+union TestUnion {
     /* Basic primitive types */
     _Bool bool_val;
 
@@ -55,58 +55,59 @@ typedef float FLOAT32;
 typedef int INT;
 
 
-struct TestStructWithTypedefs
+union TestUnionWithTypedefs
 {
     FLOAT32 float_val;
     INT int_val;
 };
 
 
-typedef struct 
+typedef union 
 {
     char char_val;
     long long_val;
 
-} TypedefStruct;
+} TypedefUnion;
 
 
-/* We currently ignore typedef struct names */
-typedef struct _unused_name_
+/* We currently ignore typedef union names */
+typedef union _unused_name_
 {
     char char_val;
     long long_val;
 
-} TypedefStruct2;
+} TypedefUnion2;
 
 
-typedef struct 
+typedef union 
 {
     float float_val;
-    TypedefStruct nested1;
+    TypedefUnion nested1;
 
-} StructWithSub;
+} UnionWithSub;
 
 
-typedef struct
+typedef union
 {
-    TypedefStruct nested1;
-    StructWithSub nested;
+    TypedefUnion nested1;
+    UnionWithSub nested;
     
-} StructWithDoubleSub;
+} UnionWithDoubleSub;
 
 
-struct WithNested {
+union WithNested {
     char not_nested;
-    struct NestedStruct {
+    union NestedUnion {
         float float_val;
     } nested;
 };
 
-struct WithNamelessNested {
+union WithNamelessNested {
     char not_nested;
-    struct {
+    union {
         float float_val;
     } nested, nested2;
 };
+
 
 #endif

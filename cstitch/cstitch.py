@@ -50,7 +50,7 @@ class Stitched(object):
             _ck.TYPEDEF_DECL:           self._parse_typedef_decl,
             _ck.ENUM_CONSTANT_DECL:     self._parse_enum_constant_decl,
             _ck.STRUCT_DECL:            self._parse_struct_decl,
-            # _ck.UNION_DECL:             self._parse_union_decl,
+            _ck.UNION_DECL:             self._parse_union_decl,
             # _ck.FUNCTION_DECL:          self._parse_function_decl,
             _ck.VAR_DECL:               self._parse_var_decl,
             # _ck.PARM_DECL:              self._parse_parm_decl,
@@ -131,6 +131,8 @@ class Stitched(object):
                     delattr(bind_to, child.spelling)
         elif type_cur.kind == _ck.STRUCT_DECL:
             self._parse_struct_decl(type_cur, bind_to, cur.spelling)
+        elif type_cur.kind == _ck.UNION_DECL:
+            self._parse_union_decl(type_cur, bind_to, cur.spelling)
         elif type_ref.kind in _type_map:
             # Found a POD type, bind it to the class.
             setattr(bind_to, cur.spelling, _type_map[type_ref.kind])
@@ -149,12 +151,28 @@ class Stitched(object):
         This creates a new class for the struct that mirrors the class
         declared in the header file.
         """
+        name, values = self._parse_type_decl(cur, bind_to, name)
+        new_type = type(name, (ctypes.Structure,), values)
+        setattr(bind_to, name, new_type)
+
+    def _parse_union_decl(self, cur, bind_to, name=None):
+        """Parse a union declaration
+
+        This creates a new class for the union that mirrors the class
+        declared in the header file.
+        """
+        name, values = self._parse_type_decl(cur, bind_to, name)
+        new_type = type(name, (ctypes.Union,), values)
+        setattr(bind_to, name, new_type)
+
+    def _parse_type_decl(self, cur, bind_to, name=None):
         name = name if name else cur.spelling
         fields = []
         for child in cur.get_children():
             # Ignore things that have been included from other files.
             if not child.location.file.name.endswith(self.filename):
                 continue
+
             if child.kind == _ck.STRUCT_DECL:
                 if child.spelling == '':
                     # This is a nameless nested struct declaration, which is
@@ -163,11 +181,18 @@ class Stitched(object):
                     continue
                 else:
                     self._parse_struct_decl(child, bind_to)
+            elif child.kind == _ck.UNION_DECL:
+                if child.spelling == '':
+                    # This is a nameless nested union declaration...
+                    continue
+                else:
+                    self._parse_union_decl(child, bind_to)
             elif child.kind == _ck.FIELD_DECL:
                 self._parse_field_decl(child, fields, name)
             else:
                 raise NotImplementedError(
-                    'Unknown cursor type inside struct declaration')
+                    'Unknown cursor type inside struct declaration: %s' %
+                    cur.location)
         rep = name + '(' + str(cur.location) + ')'
 
         def __repr__(self):
@@ -178,12 +203,10 @@ class Stitched(object):
             '_fields_': fields
         }
 
-        new_type = type(name, (ctypes.Structure,), values)
-        setattr(bind_to, name, new_type)
+        return name, values
 
-    def _parse_field_decl(self, cur, fields, struct_name=None):
+    def _parse_field_decl(self, cur, fields, type_name=None):
         """Parse a struct or union field declaration"""
-
         if cur.type.kind in _type_map:
             field_type = _type_map[cur.type.kind]
         elif hasattr(self, cur.type.spelling):
@@ -204,13 +227,21 @@ class Stitched(object):
                 # the ctypes interface, since Python requires all types to
                 # have names. If we're given a nested struct declaration
                 # without a name, then we spoof one from the name of the field
-                # and enclosing struct.
-                name = '_' + struct_name + '_' + cur.spelling + '_type'
+                # and enclosing struct. This means that declarations like
+                #
+                #   struct foo {
+                #       struct {
+                #           float x;
+                #       } bar1, bar2;
+                #   };
+                #
+                # will end up with two separate classes.
+                name = '_' + type_name + '_' + cur.spelling + '_type'
                 self._parse_struct_decl(type_cur, self, name)
 
             field_type = getattr(self, name)
         else:
-            raise NotImplementedError('Struct field type %s is unknown' %
+            raise NotImplementedError('Field type %s is unknown' %
                                       cur.type.kind)
 
         fields.append((cur.spelling, field_type))

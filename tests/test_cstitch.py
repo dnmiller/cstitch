@@ -147,5 +147,81 @@ def test_structs():
     # WithNamelessNested
     assert '_WithNamelessNested_nested_type' in \
         str(obj.WithNamelessNested.nested)
+    assert '_WithNamelessNested_nested2_type' in \
+        str(obj.WithNamelessNested.nested2)
     x = obj.WithNamelessNested()
     assert hasattr(x.nested, 'float_val')
+    assert hasattr(x.nested2, 'float_val')
+
+
+def test_unions():
+    """Union definitions are parsed correctly"""
+    obj = Stitched(get_header('test_union.h'))
+
+    # TestUnion
+    fields = (
+        ('bool_val', ctypes.c_bool),
+        ('char_val', ctypes.c_char),
+        ('schar_val', ctypes.c_char),
+        ('uchar_val', ctypes.c_ubyte),
+        ('short_val', ctypes.c_short),
+        ('ushort_val', ctypes.c_ushort),
+        ('int_val', ctypes.c_int),
+        ('uint_val', ctypes.c_uint),
+        ('long_val', ctypes.c_long),
+        ('ulong_val', ctypes.c_ulong),
+        ('float_val', ctypes.c_float),
+        ('double_val', ctypes.c_double),
+        ('ldouble_val', ctypes.c_longdouble),
+        ('longlong_val', ctypes.c_longlong),
+        ('ulonglong_val', ctypes.c_ulonglong))
+
+    for name, field_type in fields:
+        assert hasattr(obj.TestUnion, name)
+        assert hasattr(getattr(obj.TestUnion, name), 'offset')
+        assert hasattr(getattr(obj.TestUnion, name), 'size')
+        assert field_type.__name__ in str(getattr(obj.TestUnion, name))
+
+    # Test typedefs
+    assert obj.FLOAT32 == ctypes.c_float
+    assert obj.INT == ctypes.c_int
+
+    # TestUnionWithTypedefs
+    assert 'c_float' in str(obj.TestUnionWithTypedefs.float_val)
+    assert 'c_int' in str(obj.TestUnionWithTypedefs.int_val)
+
+    # TypedefUnion
+    assert 'c_char' in str(obj.TypedefUnion.char_val)
+    assert 'c_long' in str(obj.TypedefUnion.long_val)
+
+    # TypedefUnion2
+    assert 'c_char' in str(obj.TypedefUnion2.char_val)
+    assert 'c_long' in str(obj.TypedefUnion2.long_val)
+
+    # UnionWithSub
+    assert 'TypedefUnion' in str(obj.UnionWithSub.nested1)
+    assert 'c_float' in str(obj.UnionWithSub.float_val)
+    x = obj.UnionWithSub()
+    assert hasattr(x.nested1, 'char_val')
+
+    # UnionWithDoubleSub
+    assert 'TypedefUnion' in str(obj.UnionWithDoubleSub.nested1)
+    assert 'UnionWithSub' in str(obj.UnionWithDoubleSub.nested)
+    x = obj.UnionWithDoubleSub()
+    assert hasattr(x.nested1, 'char_val')
+    assert hasattr(x.nested, 'nested1')
+    assert hasattr(x.nested.nested1, 'char_val')
+
+    # WithNested
+    assert 'NestedUnion' in str(obj.WithNested.nested)
+    x = obj.WithNested()
+    assert hasattr(x.nested, 'float_val')
+
+    # WithNamelessNested
+    assert '_WithNamelessNested_nested_type' in \
+        str(obj.WithNamelessNested.nested)
+    assert '_WithNamelessNested_nested2_type' in \
+        str(obj.WithNamelessNested.nested2)
+    x = obj.WithNamelessNested()
+    assert hasattr(x.nested, 'float_val')
+    assert hasattr(x.nested2, 'float_val')
