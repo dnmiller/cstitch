@@ -225,3 +225,21 @@ def test_unions():
     x = obj.WithNamelessNested()
     assert hasattr(x.nested, 'float_val')
     assert hasattr(x.nested2, 'float_val')
+
+
+def test_functions():
+    """Function declarations are parsed correctly"""
+    obj = Stitched(get_header('test_functions.h'))
+    assert not hasattr(obj, 'ignored')
+
+    assert hasattr(obj, 'dummy')
+    assert obj.dummy.restype is None
+    assert obj.dummy.argtypes == []
+
+    assert hasattr(obj, 'no_ret')
+    assert obj.no_ret.restype is None
+    assert obj.no_ret.argtypes == [ctypes.c_int]
+
+    assert hasattr(obj, 'no_args')
+    assert obj.no_args.restype == ctypes.c_int
+    assert obj.no_args.argtypes == []

@@ -34,15 +34,13 @@ _type_map = {
     _tk.ULONGLONG:      ctypes.c_ulonglong,
     _tk.FLOAT:          ctypes.c_float,
     _tk.DOUBLE:         ctypes.c_double,
-    _tk.LONGDOUBLE:     ctypes.c_longdouble
+    _tk.LONGDOUBLE:     ctypes.c_longdouble,
+    _tk.VOID:           None
 }
 
 
 class Stitched(object):
     def __init__(self, filename):
-        self._types = {}
-        self._funcs = {}
-        self._structs = {}
         self.filename = filename
 
         self._cursor_map = {
@@ -51,7 +49,7 @@ class Stitched(object):
             _ck.ENUM_CONSTANT_DECL:     self._parse_enum_constant_decl,
             _ck.STRUCT_DECL:            self._parse_struct_decl,
             _ck.UNION_DECL:             self._parse_union_decl,
-            # _ck.FUNCTION_DECL:          self._parse_function_decl,
+            _ck.FUNCTION_DECL:          self._parse_function_decl,
             _ck.VAR_DECL:               self._parse_var_decl,
             # _ck.PARM_DECL:              self._parse_parm_decl,
             # _ck.TYPE_REF:               self._parse_type_ref,
@@ -83,6 +81,9 @@ class Stitched(object):
             # Ignore things that have been included from other files.
             if not child.location.file.name.endswith(self.filename):
                 continue
+            elif child.kind not in self._cursor_map:
+                raise NotImplementedError('Unknown cursor kind %s'
+                                          % child.kind)
             self._cursor_map[child.kind](child, bind_to)
 
     def _parse_enum_decl(self, cur, bind_to, name=None):
@@ -91,7 +92,7 @@ class Stitched(object):
         Enum declarations are handled in two different ways. If the enum is
         typedef'd, then a new type is constructed with the individual enums
         bound to the class. If there is no typedef, then the constants are
-        bound to the module.
+        bound to the Stiched object.
         """
         # The name is '' if no typedef exists.
         name = name if name else cur.spelling
@@ -166,6 +167,8 @@ class Stitched(object):
         setattr(bind_to, name, new_type)
 
     def _parse_type_decl(self, cur, bind_to, name=None):
+        """Parse a new data type. This can be a struct or union.
+        """
         name = name if name else cur.spelling
         fields = []
         for child in cur.get_children():
@@ -180,14 +183,17 @@ class Stitched(object):
                     # field declaration.
                     continue
                 else:
+                    # Named, nested struct declaration.
                     self._parse_struct_decl(child, bind_to)
             elif child.kind == _ck.UNION_DECL:
                 if child.spelling == '':
                     # This is a nameless nested union declaration...
                     continue
                 else:
+                    # Named, nested union declaration.
                     self._parse_union_decl(child, bind_to)
             elif child.kind == _ck.FIELD_DECL:
+                # A struct field.
                 self._parse_field_decl(child, fields, name)
             else:
                 raise NotImplementedError(
@@ -249,3 +255,38 @@ class Stitched(object):
     def _parse_var_decl(self, cur, bind_to):
         """Parse a variable declaration"""
         raise NotImplementedError('global variables not yet figured out')
+
+    def _parse_function_decl(self, cur, bind_to):
+        """Parse a function declaration"""
+        if 'static' in [t.spelling for t in cur.get_tokens()]:
+            # Not sure what a static declaration is doing here, but ignore it
+            # all the same. The is_static_methdd function in libclang seems to
+            # only consider the C++ meaning of static.
+            return
+        # Iterate over the function arguments.
+        argtypes = []
+        for arg in cur.get_arguments():
+            if arg.type.kind in _type_map:
+                argtypes.append(_type_map[arg.type.kind])
+
+        if cur.result_type.kind in _type_map:
+            restype = _type_map[cur.result_type.kind]
+
+        func = StichedFunction(cur.spelling, argtypes, restype, cur.location)
+        setattr(self, cur.spelling, func)
+
+
+class _DummyFuncDecl(object):
+    def __call__(self, *args, **kwargs):
+        pass
+
+
+class StichedFunction(object):
+    def __init__(self, name, argtypes, restype, location):
+        self.name = name
+        self.argtypes = argtypes
+        self.restype = restype
+        self.location = location
+
+    def __call__(self, *args, **kwargs):
+        pass
