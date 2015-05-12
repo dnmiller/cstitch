@@ -263,6 +263,52 @@ class Stitched(object):
             # all the same. The is_static_methdd function in libclang seems to
             # only consider the C++ meaning of static.
             return
+        setattr(self, cur.spelling, StichedFunction.from_cursor(cur))
+
+
+class _UnlinkedFunction(object):
+    def __init__(self, argtypes, restype, errcheck):
+        self.argtypes = argtypes
+        self.restype = restype
+        self.errcheck = errcheck
+
+    def __call__(self, *args, **kwargs):
+        raise RuntimeError('StichedFunction is not linked to shared library')
+
+
+class StichedFunction(object):
+    def __init__(self, name, argtypes, restype, errcheck=None, lib=None,
+                 location=None):
+        self.name = name
+        self._func = _UnlinkedFunction(argtypes, restype, errcheck)
+        self.location = None
+        self.link_library(lib)
+
+    def __call__(self, *args):
+        if len(args) != len(self.argtypes):
+            raise RuntimeError('Invalid number of arguments')
+        # TODO: Take optional kwargs if parsed
+        self._func(*args)
+
+    def link_library(self, lib):
+        if lib:
+            if not hasattr(lib, self.name):
+                raise RuntimeError('symbol %s not found' % self.name)
+            # Save function parameters to bind later
+            argtypes, restype, errcheck = \
+                self.argtypes, self.restype, self.errcheck
+            # Get symbol from library and assign types
+            self._func = getattr(lib, self.name)
+            self._func.argtypes = argtypes
+            self._func.restypes = restype
+            self._func.errcheck = errcheck
+        else:
+            self._func = _UnlinkedFunction(self.argtypes, self.restype,
+                                           self.errcheck)
+        self._lib = lib
+
+    @classmethod
+    def from_cursor(cls, cur, lib=None):
         # Iterate over the function arguments.
         argtypes = []
         for arg in cur.get_arguments():
@@ -272,21 +318,28 @@ class Stitched(object):
         if cur.result_type.kind in _type_map:
             restype = _type_map[cur.result_type.kind]
 
-        func = StichedFunction(cur.spelling, argtypes, restype, cur.location)
-        setattr(self, cur.spelling, func)
+        return cls(cur.spelling, argtypes, restype, None, lib, cur.location)
 
+    @property
+    def argtypes(self):
+        return self._func.argtypes
 
-class _DummyFuncDecl(object):
-    def __call__(self, *args, **kwargs):
-        pass
+    @argtypes.setter
+    def argtypes(self, argtypes):
+        self._func.argtypes = argtypes
 
+    @property
+    def restype(self):
+        return self._func.restype
 
-class StichedFunction(object):
-    def __init__(self, name, argtypes, restype, location):
-        self.name = name
-        self.argtypes = argtypes
-        self.restype = restype
-        self.location = location
+    @restype.setter
+    def restype(self, restype):
+        self._func.restype = restype
 
-    def __call__(self, *args, **kwargs):
-        pass
+    @property
+    def errcheck(self):
+        return self._func.errcheck
+
+    @errcheck.setter
+    def errcheck(self, errcheck):
+        self._func.errcheck = errcheck
